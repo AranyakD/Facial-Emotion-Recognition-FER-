@@ -25,8 +25,6 @@ test_dataset = tf.keras.preprocessing.image_dataset_from_directory(
 
 # normalization layer
 normalization_layer = tf.keras.layers.Rescaling(1./255)
-
-# applying normalization to train_dataset and test_dataset
 train_dataset = train_dataset.map(lambda x, y: (normalization_layer(x), y))
 test_dataset = test_dataset.map(lambda x, y: (normalization_layer(x), y))
 
@@ -37,6 +35,17 @@ print("Emotion Classes:", class_names) """
 """ for images, labels in train_dataset.take(1):
     print("min pixel val:", tf.reduce_min(images))
     print("max pixel val:", tf.reduce_max(images)) """
+
+# data augmentation
+data_augmentation = tf.keras.Sequential([
+    tf.keras.layers.RandomFlip("horizontal"),
+    tf.keras.layers.RandomRotation(0.1),
+    tf.keras.layers.RandomZoom(0.1),
+])
+
+train_dataset = train_dataset.map(
+    lambda x, y: (data_augmentation(x, training=True), y)
+)
 
 # Defining CNN model
 model = tf.keras.models.Sequential([
