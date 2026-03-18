@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Dataset folders
+dataset_Train/
+dataset_Test/
+*.csv
+*.zip
+
+# Logs
+logs/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
