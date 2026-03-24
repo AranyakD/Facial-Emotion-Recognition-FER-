@@ -27,6 +27,8 @@ face_cascade = cv2.CascadeClassifier(
 # webcam
 cap = cv2.VideoCapture(0)
 
+emotion_history = []
+
 # main loop
 while True:
     ret, frame = cap.read()
@@ -38,7 +40,12 @@ while True:
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
     for (x, y, w, h) in faces:
-        face = frame[y:y+h, x:x+w]
+        margin = 20
+        y1 = max(0, y-margin)
+        y2 = min(frame.shape[0], y+h+margin)
+        x1 = max(0, x-margin)
+        x2 = min(frame.shape[1], x+w+margin)
+        face = frame[y1:y2, x1:x2]
 
         # resize to match training
         face = cv2.resize(face, (192, 192))
@@ -51,11 +58,21 @@ while True:
 
         # prediction
         preds = model.predict(face, verbose=0)
-        emotion = emotion_labels[np.argmax(preds)]
+
+        emotion_index = np.argmax(preds)
+        emotion_history.append(emotion_index)
+
+        if len(emotion_history) > 10:
+            emotion_history.pop(0)
+
+        emotion_index = max(set(emotion_history), key=emotion_history.count)
+        emotion = emotion_labels[emotion_index]
 
         # draw
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(frame, emotion, (x, y-10),
+        confidence = np.max(preds) * 100
+
+        cv2.putText(frame, f"{emotion} ({confidence:.1f}%)", (x, y-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
     cv2.imshow('FER - Emotion Detection', frame)
