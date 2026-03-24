@@ -40,7 +40,7 @@ while True:
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
     for (x, y, w, h) in faces:
-        margin = 20
+        margin = 30
         y1 = max(0, y-margin)
         y2 = min(frame.shape[0], y+h+margin)
         x1 = max(0, x-margin)
@@ -49,7 +49,6 @@ while True:
 
         # resize to match training
         face = cv2.resize(face, (192, 192))
-
         face = np.array(face, dtype='float32')
         face = np.expand_dims(face, axis=0)
 
@@ -58,24 +57,62 @@ while True:
 
         # prediction
         preds = model.predict(face, verbose=0)
+        percentages = preds[0] * 100
 
+        # confidence
+        confidence = np.max(preds)
+        confidence_percent = confidence * 100
         emotion_index = np.argmax(preds)
-        emotion_history.append(emotion_index)
 
-        if len(emotion_history) > 10:
-            emotion_history.pop(0)
+        # threshold + smoothing
+        if confidence < 0.4:
+            emotion = "Uncertain"
+            color = (0, 0, 255)
+        else:
+            emotion_history.append(emotion_index)
 
-        emotion_index = max(set(emotion_history), key=emotion_history.count)
-        emotion = emotion_labels[emotion_index]
+            if len(emotion_history) > 15:
+                emotion_history.pop(0)
+
+            emotion_index = max(set(emotion_history),
+                                key=emotion_history.count)
+            emotion = emotion_labels[emotion_index]
+            color = (0, 255, 0)
 
         # draw
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        confidence = np.max(preds) * 100
+        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
 
-        cv2.putText(frame, f"{emotion} ({confidence:.1f}%)", (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        # show percentages
+        start_y = 30
+        for i, (label, value) in enumerate(zip(emotion_labels, percentages)):
+            text = f"{label}: {value:.1f}%"
+            # shadow (white outline)
+            cv2.putText(frame, text, (10, start_y + i*25),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 4)
 
-    cv2.imshow('FER - Emotion Detection', frame)
+            # main text (black)
+            cv2.putText(frame, text, (10, start_y + i*25),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+        # main label
+        cv2.putText(frame,
+                    f"{emotion} ({confidence_percent:.1f}%)",
+                    (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                    color, 2)
+    # esc text
+    text = "Press ESC to exit"
+
+    # shadow
+    cv2.putText(frame, text,
+                (10, frame.shape[0]-10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 3)
+
+    # main text
+    cv2.putText(frame, text,
+                (10, frame.shape[0]-10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
+
+    cv2.imshow('Facial Emotion Recognition System (FER)', frame)
 
     if cv2.waitKey(1) & 0xFF == 27:  # ESC to exit
         break
